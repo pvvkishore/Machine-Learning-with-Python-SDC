@@ -1,0 +1,43 @@
+name: Update Notebook Descriptions
+
+on:
+  push:
+    paths:
+      - '**.ipynb'
+  workflow_dispatch:
+
+jobs:
+  update-descriptions:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Generate notebook descriptions
+        run: |
+          python notebook_analyzer.py . -o NOTEBOOKS.md
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git diff --quiet NOTEBOOKS.md || echo "changed=true" >> $GITHUB_OUTPUT
+      
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.changed == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add NOTEBOOKS.md
+          git commit -m "Auto-update notebook descriptions [skip ci]"
+          git push
